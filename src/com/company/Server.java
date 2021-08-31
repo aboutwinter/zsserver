@@ -8,6 +8,8 @@ import java.io.*;
 import java.sql.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -18,11 +20,8 @@ public class Server {
         try {
             int port = 10000;
             ExecutorService pool = Executors.newFixedThreadPool(50);
-
             try (ServerSocket serverSocket = new ServerSocket(port)) {
-
                 do {
-
                     final Socket connection = serverSocket.accept();
                     pool.execute(() -> {
                         try {
@@ -30,7 +29,7 @@ public class Server {
                             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
                             String client_mess;
                             while ((client_mess = br.readLine()) != null) {
-                                System.out.println(connection);
+                                Server.event(connection.toString());
                                 JSONParser jsonParser = new JSONParser();
                                 JSONObject rec = (JSONObject) jsonParser.parse(client_mess);
                                 String function = (String) rec.get("function");
@@ -39,7 +38,7 @@ public class Server {
                                     case "login": {
                                         String username = (String) content.get("username");
                                         String password = (String) content.get("password");
-                                        System.out.println(username + " is trying to login.");
+                                        Server.event(username + " is trying to login.");
                                         Connection con;
                                         Class.forName("org.postgresql.Driver");
                                         con = DriverManager.getConnection("jdbc:postgresql://47.119.141.11:5432/info", "user", "user123456");
@@ -50,15 +49,15 @@ public class Server {
                                         while (rs.next()) res = rs.getInt(1);
                                         switch (res) {
                                             case 0: {
-                                                System.out.println("register succeed.");
+                                                Server.event("successful registration.");
                                             }
                                             break;
                                             case 1: {
-                                                System.out.println("login succeed.");
+                                                Server.event("login succeed.");
                                             }
                                             break;
                                             case 2: {
-                                                System.out.println("login failed.");
+                                                Server.event("login failed.");
                                             }
                                             break;
                                         }
@@ -78,27 +77,26 @@ public class Server {
                                         long id = (long) content.get("id");
                                         long sign = (long) content.get("sign");
                                         String time_stamp = (String) rec.get("timestamp");
-                                        System.out.println(id + " is sending data.");
+                                        Server.event(id + " is sending data.");
                                         Connection con;
                                         Class.forName("org.postgresql.Driver");
                                         con = DriverManager.getConnection("jdbc:postgresql://47.119.141.11:5432/info", "user", "user123456");
                                         String sql;
                                         if (sign == 1)
-                                            sql = "SELECT comein(" + id + ",'true','" + time_stamp + "');";
+                                            sql = "SELECT comeIn(" + id + ",'true','" + time_stamp + "');";
                                         else
-                                            sql = "SELECT comein(" + id + ",'false',+'" + time_stamp + "');";
-                                        System.out.println(sql);
+                                            sql = "SELECT comeIn(" + id + ",'false',+'" + time_stamp + "');";
                                         Statement st = con.createStatement();
                                         ResultSet rs = st.executeQuery(sql);
                                         int res = 3;
                                         while (rs.next()) res = rs.getInt(1);
                                         switch (res) {
                                             case 0: {
-                                                System.out.println("succeed.");
+                                                Server.event("census succeed.");
                                             }
                                             break;
                                             case 1: {
-                                                System.out.println("failed.");
+                                                Server.event("census failed.");
                                             }
                                             break;
                                         }
@@ -131,5 +129,11 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    static void event(String message) {
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+        LocalDateTime now = LocalDateTime.now();
+        System.out.println(dtf.format(now) + message);
     }
 }
